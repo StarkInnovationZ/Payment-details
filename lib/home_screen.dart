@@ -56,6 +56,16 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
+  // Summary Card-ஐ கிளிக் செய்யும்போது filter மற்றும் search-ஐ reset செய்வதற்கான function
+  void _onSummaryCardTapped(String paymentFilter, String statusFilter) {
+    _searchCtrl.clear();
+    setState(() {
+      _searchQuery = '';
+      _paymentFilter = paymentFilter;
+      _statusFilter = statusFilter;
+    });
+  }
+
   List<Project> _filter(List<Project> all) {
     return all.where((p) {
       final q = _searchQuery.toLowerCase();
@@ -126,6 +136,8 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildError(String error) {
+    final isNetworkError = error.toLowerCase().contains('network') || error.toLowerCase().contains('timeout');
+
     return Container(
       color: AppColors.background,
       padding: const EdgeInsets.all(32),
@@ -140,17 +152,19 @@ class _HomeScreenState extends State<HomeScreen>
                 color: AppColors.dangerBg,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.cloud_off_rounded,
+              child: Icon(
+                isNetworkError ? Icons.cloud_off_rounded : Icons.error_outline_rounded,
                 color: AppColors.danger,
                 size: 36,
               ),
             ),
             const SizedBox(height: 20),
-            const Text('Connection Failed', style: AppTextStyles.displayMedium),
+            Text(isNetworkError ? 'Connection Failed' : 'Data Error', style: AppTextStyles.displayMedium),
             const SizedBox(height: 8),
             Text(
-              'Could not reach the server.\nCheck your internet connection.',
+              isNetworkError
+                  ? 'Could not reach the server.\nCheck your internet connection.'
+                  : 'There was a problem processing the data from the server.',
               textAlign: TextAlign.center,
               style: AppTextStyles.bodyMedium,
             ),
@@ -185,14 +199,14 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildContent(List<Project> all, List<Project> filtered) {
-    final totalFee = all.fold<double>(0, (s, p) => s + p.feeDouble);
+    final totalFee = all.fold<double>(0, (s, p) => s + _parseAmount(p.feeAmount));
     final paidFee = all
         .where((p) => p.isPaid)
-        .fold<double>(0, (s, p) => s + p.feeDouble);
+        .fold<double>(0, (s, p) => s + _parseAmount(p.feeAmount));
+    final unpaidFee = totalFee - paidFee;
     final paidCount = all.where((p) => p.isPaid).length;
     final unpaidCount = all.where((p) => !p.isPaid).length;
     final completedCount = all.where((p) => p.isCompleted).length;
-    final pendingCount = all.where((p) => p.isPending).length;
 
     return CustomScrollView(
       slivers: [
@@ -249,22 +263,28 @@ class _HomeScreenState extends State<HomeScreen>
                 Row(
                   children: [
                     Expanded(
-                      child: SummaryCard(
-                        label: 'Total Revenue',
-                        value: '₹${_fmt(totalFee)}',
-                        icon: Icons.currency_rupee_rounded,
-                        color: AppColors.navy,
-                        textColor: Colors.white,
+                      child: GestureDetector(
+                        onTap: () => _onSummaryCardTapped('All', 'All'),
+                        child: SummaryCard(
+                          label: 'Total Amount',
+                          value: '₹${_fmt(totalFee)}',
+                          icon: Icons.account_balance_wallet_rounded,
+                          color: AppColors.navy,
+                          textColor: Colors.white,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: SummaryCard(
-                        label: 'Collected',
-                        value: '₹${_fmt(paidFee)}',
-                        icon: Icons.check_circle_outline_rounded,
-                        color: AppColors.success,
-                        textColor: Colors.white,
+                      child: GestureDetector(
+                        onTap: () => _onSummaryCardTapped('Paid', 'All'),
+                        child: SummaryCard(
+                          label: 'Received',
+                          value: '₹${_fmt(paidFee)}',
+                          icon: Icons.check_circle_outline_rounded,
+                          color: AppColors.success,
+                          textColor: Colors.white,
+                        ),
                       ),
                     ),
                   ],
@@ -273,35 +293,47 @@ class _HomeScreenState extends State<HomeScreen>
                 Row(
                   children: [
                     Expanded(
-                      child: SummaryCard(
-                        label: 'Paid',
-                        value: '$paidCount clients',
-                        icon: Icons.verified_rounded,
-                        color: AppColors.infoBg,
-                        textColor: AppColors.info,
-                        borderColor: AppColors.info.withOpacity(0.3),
+                      child: GestureDetector(
+                        onTap: () => _onSummaryCardTapped('Unpaid', 'All'),
+                        child: SummaryCard(
+                          label: 'Balance',
+                          value: '₹${_fmt(unpaidFee)}',
+                          icon: Icons.account_balance_rounded,
+                          color: AppColors.warning,
+                          textColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _onSummaryCardTapped('Unpaid', 'All'),
+                        child: SummaryCard(
+                          label: 'Pending Clients',
+                          value: '$unpaidCount',
+                          icon: Icons.pending_actions_rounded,
+                          color: AppColors.warningBg,
+                          textColor: AppColors.warning,
+                          borderColor: AppColors.warning.withOpacity(0.3),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: SummaryCard(
-                        label: 'Pending',
-                        value: '$unpaidCount clients',
-                        icon: Icons.pending_actions_rounded,
-                        color: AppColors.warningBg,
-                        textColor: AppColors.warning,
-                        borderColor: AppColors.warning.withOpacity(0.3),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: SummaryCard(
-                        label: 'Done',
-                        value: '$completedCount',
-                        icon: Icons.task_alt_rounded,
-                        color: AppColors.successBg,
-                        textColor: AppColors.success,
-                        borderColor: AppColors.success.withOpacity(0.3),
+                      child: GestureDetector(
+                        onTap: () => _onSummaryCardTapped('Paid', 'All'),
+                        child: SummaryCard(
+                          label: 'Paid Clients',
+                          value: '$paidCount',
+                          icon: Icons.verified_rounded,
+                          color: AppColors.infoBg,
+                          textColor: AppColors.info,
+                          borderColor: AppColors.info.withOpacity(0.3),
+                        ),
                       ),
                     ),
                   ],
@@ -374,17 +406,13 @@ class _HomeScreenState extends State<HomeScreen>
                       _buildChip('All', _statusFilter == 'All',
                           () => setState(() => _statusFilter = 'All')),
                       _buildChip(
-                          'In Progress',
-                          _statusFilter == 'In Progress',
-                          () => setState(() => _statusFilter = 'In Progress')),
+                          'On Going',
+                          _statusFilter == 'On Going',
+                          () => setState(() => _statusFilter = 'On Going')),
                       _buildChip(
                           'Completed',
                           _statusFilter == 'Completed',
                           () => setState(() => _statusFilter = 'Completed')),
-                      _buildChip(
-                          'Pending',
-                          _statusFilter == 'Pending',
-                          () => setState(() => _statusFilter = 'Pending')),
                       const SizedBox(width: 8),
                       _buildFilterLabel('Pay:'),
                       _buildChip('All', _paymentFilter == 'All',
@@ -449,9 +477,9 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildAppBarBg(List<Project> all) {
-    final totalFee = all.fold<double>(0, (s, p) => s + p.feeDouble);
+    final totalFee = all.fold<double>(0, (s, p) => s + _parseAmount(p.feeAmount));
     final paidFee =
-        all.where((p) => p.isPaid).fold<double>(0, (s, p) => s + p.feeDouble);
+        all.where((p) => p.isPaid).fold<double>(0, (s, p) => s + _parseAmount(p.feeAmount));
     final pct = totalFee > 0 ? (paidFee / totalFee).clamp(0, 1) : 0.0;
 
     return Container(
@@ -615,11 +643,18 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   String _fmt(double v) {
-    if (v >= 100000) {
-      return '${(v / 100000).toStringAsFixed(1)}L';
-    } else if (v >= 1000) {
-      return '${(v / 1000).toStringAsFixed(1)}K';
-    }
     return v.toStringAsFixed(0);
+  }
+
+  double _parseAmount(String val) {
+    if (val.isEmpty) return 0.0;
+    val = val.replaceAll(',', ''); // Remove commas if any
+    final parts = val.split('+'); // Split math equations like "430 + 80"
+    double total = 0.0;
+    for (final p in parts) {
+      final cleaned = p.replaceAll(RegExp(r'[^0-9\.]'), ''); // Strip out any remaining text
+      total += double.tryParse(cleaned) ?? 0.0;
+    }
+    return total;
   }
 }

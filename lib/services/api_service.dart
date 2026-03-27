@@ -48,6 +48,30 @@ class ApiService {
 
       print('✅ [API] Found ${dataList.length} records');
 
+      // Check if the data is a 2D array (list of lists) like from Google Sheets getValues()
+      // If so, convert it to a List of Maps using the first row as headers.
+      if (dataList.isNotEmpty && dataList.first is List) {
+        print('🔄 [API] Detected 2D array format. Converting to List of Maps...');
+        final List<dynamic> headers = dataList.first as List;
+        final List<Map<String, dynamic>> mappedList = [];
+        
+        for (int i = 1; i < dataList.length; i++) {
+          final List<dynamic> row = dataList[i] as List;
+          
+          // Skip completely empty rows
+          if (row.isEmpty || row.every((e) => e == null || e.toString().trim().isEmpty)) {
+            continue;
+          }
+
+          final Map<String, dynamic> rowData = {};
+          for (int j = 0; j < headers.length && j < row.length; j++) {
+            rowData[headers[j].toString()] = row[j];
+          }
+          mappedList.add(rowData);
+        }
+        dataList = mappedList;
+      }
+
       // Convert to Project objects
       final projects = dataList.asMap().entries.map((entry) {
         try {
