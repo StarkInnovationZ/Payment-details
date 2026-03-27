@@ -5,7 +5,7 @@ import '../utils/app_theme.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/project_list_item.dart';
 import 'project_detail_screen.dart';
-import 'screens/report_screen.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen>
   late AnimationController _headerAnim;
   late Animation<double> _headerOpacity;
   late Animation<Offset> _headerSlide;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -31,15 +32,15 @@ class _HomeScreenState extends State<HomeScreen>
     _future = ApiService.fetchProjects();
     _headerAnim = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 600),
     );
     _headerOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _headerAnim, curve: Curves.easeIn),
+      CurvedAnimation(parent: _headerAnim, curve: Curves.easeOut),
     );
     _headerSlide = Tween<Offset>(
-      begin: const Offset(0, -0.2),
+      begin: const Offset(0, -0.1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _headerAnim, curve: Curves.easeOut));
+    ).animate(CurvedAnimation(parent: _headerAnim, curve: Curves.easeOutCubic));
     _headerAnim.forward();
   }
 
@@ -47,6 +48,7 @@ class _HomeScreenState extends State<HomeScreen>
   void dispose() {
     _searchCtrl.dispose();
     _headerAnim.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -56,13 +58,22 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
-  // Summary Card-ஐ கிளிக் செய்யும்போது filter மற்றும் search-ஐ reset செய்வதற்கான function
   void _onSummaryCardTapped(String paymentFilter, String statusFilter) {
     _searchCtrl.clear();
     setState(() {
       _searchQuery = '';
       _paymentFilter = paymentFilter;
       _statusFilter = statusFilter;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeOutCubic,
+        );
+      }
     });
   }
 
@@ -85,6 +96,22 @@ class _HomeScreenState extends State<HomeScreen>
       return matchQ && matchS && matchP;
     }).toList();
   }
+
+  double _parseAmount(String val) {
+    if (val.isEmpty) return 0.0;
+    val = val.replaceAll('₹', '').replaceAll('/-', '').trim();
+    double total = 0.0;
+    final parts = val.split(RegExp(r'[+&]'));
+    for (final part in parts) {
+      final cleaned = part.replaceAll(RegExp(r'[^0-9.]'), '');
+      if (cleaned.isNotEmpty) {
+        total += double.tryParse(cleaned) ?? 0.0;
+      }
+    }
+    return total;
+  }
+
+  String _fmt(double v) => v.toStringAsFixed(2);
 
   @override
   Widget build(BuildContext context) {
@@ -110,24 +137,28 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildLoading() {
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0A2540), Color(0xFF1A3A5C)],
-        ),
+        gradient: AppColors.primaryGradient,
       ),
-      child: const Center(
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(
-              color: AppColors.gold,
-              strokeWidth: 3,
+            const SizedBox(
+              width: 40,
+              height: 40,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
+              ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text(
-              'Fetching data from server…',
-              style: TextStyle(color: Colors.white60, fontSize: 14),
+              'Fetching your data...',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.7),
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -136,7 +167,8 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildError(String error) {
-    final isNetworkError = error.toLowerCase().contains('network') || error.toLowerCase().contains('timeout');
+    final isNetworkError = error.toLowerCase().contains('network') ||
+        error.toLowerCase().contains('timeout');
 
     return Container(
       color: AppColors.background,
@@ -149,47 +181,43 @@ class _HomeScreenState extends State<HomeScreen>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: AppColors.dangerBg,
+                gradient: AppColors.warningGradient,
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                isNetworkError ? Icons.cloud_off_rounded : Icons.error_outline_rounded,
-                color: AppColors.danger,
+                isNetworkError
+                    ? Icons.cloud_off_rounded
+                    : Icons.error_outline_rounded,
+                color: Colors.white,
                 size: 36,
               ),
             ),
             const SizedBox(height: 20),
-            Text(isNetworkError ? 'Connection Failed' : 'Data Error', style: AppTextStyles.displayMedium),
+            Text(
+              isNetworkError ? 'Connection Failed' : 'Data Error',
+              style: AppTextStyles.displayMedium,
+            ),
             const SizedBox(height: 8),
             Text(
               isNetworkError
-                  ? 'Could not reach the server.\nCheck your internet connection.'
-                  : 'There was a problem processing the data from the server.',
+                  ? 'Unable to reach the server.\nPlease check your connection.'
+                  : 'Something went wrong while loading your data.',
               textAlign: TextAlign.center,
               style: AppTextStyles.bodyMedium,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              error,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppColors.textMuted,
-              ),
             ),
             const SizedBox(height: 28),
             ElevatedButton.icon(
               onPressed: _refresh,
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Retry'),
+              label: const Text('Try Again'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.navy,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 28, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
+                elevation: 2,
               ),
             ),
           ],
@@ -206,67 +234,76 @@ class _HomeScreenState extends State<HomeScreen>
     final unpaidFee = totalFee - paidFee;
     final paidCount = all.where((p) => p.isPaid).length;
     final unpaidCount = all.where((p) => !p.isPaid).length;
-    final completedCount = all.where((p) => p.isCompleted).length;
 
     return CustomScrollView(
+      controller: _scrollController,
       slivers: [
-        // ── App Bar ─────────────────────────────────────────────────
+        // Premium App Bar
         SliverAppBar(
-          expandedHeight: 200,
+          expandedHeight: 220,
           pinned: true,
           backgroundColor: AppColors.navy,
           flexibleSpace: FlexibleSpaceBar(
-            background: _buildAppBarBg(all),
+            background: _buildPremiumAppBar(all, totalFee, paidFee),
           ),
           title: AnimatedBuilder(
             animation: _headerAnim,
             builder: (_, __) => FadeTransition(
               opacity: _headerOpacity,
-              child: const Text(
-                'CFO TRACKER',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                  letterSpacing: 2,
+              child: SlideTransition(
+                position: _headerSlide,
+                child: const Text(
+                  'Operation TRACKER',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                    letterSpacing: 2,
+                  ),
                 ),
               ),
             ),
           ),
           actions: [
+            const SizedBox(width: 8),
             IconButton(
-              icon: const Icon(Icons.table_chart_rounded, color: Colors.white),
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => ReportScreen(projects: all)));
-              },
-              tooltip: 'View Full Sheet',
-            ),
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+              ),
               onPressed: _refresh,
               tooltip: 'Refresh',
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 12),
           ],
         ),
 
-        // ── Summary Cards ────────────────────────────────────────────
+        // Summary Cards Section
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Financial Overview',
-                    style: AppTextStyles.titleLarge),
-                const SizedBox(height: 12),
+                Text(
+                  'Financial Overview',
+                  style: AppTextStyles.titleLarge.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
-                      child: GestureDetector(
+                      child: _TappableCard(
+                        isActive: _paymentFilter == 'All' && _statusFilter == 'All',
                         onTap: () => _onSummaryCardTapped('All', 'All'),
                         child: SummaryCard(
-                          label: 'Total Amount',
+                          label: 'Total Portfolio',
                           value: '₹${_fmt(totalFee)}',
                           icon: Icons.account_balance_wallet_rounded,
                           color: AppColors.navy,
@@ -274,12 +311,13 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: GestureDetector(
+                      child: _TappableCard(
+                        isActive: _paymentFilter == 'Paid',
                         onTap: () => _onSummaryCardTapped('Paid', 'All'),
                         child: SummaryCard(
-                          label: 'Received',
+                          label: 'Collected',
                           value: '₹${_fmt(paidFee)}',
                           icon: Icons.check_circle_outline_rounded,
                           color: AppColors.success,
@@ -289,50 +327,69 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
-                      child: GestureDetector(
+                      child: _TappableCard(
+                        isActive: _paymentFilter == 'Unpaid',
                         onTap: () => _onSummaryCardTapped('Unpaid', 'All'),
                         child: SummaryCard(
-                          label: 'Balance',
+                          label: 'Pending Collection',
                           value: '₹${_fmt(unpaidFee)}',
-                          icon: Icons.account_balance_rounded,
+                          icon: Icons.pending_actions_rounded,
                           color: AppColors.warning,
+                          textColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _TappableCard(
+                        isActive: false,
+                        onTap: () {},
+                        child: SummaryCard(
+                          label: 'Collection Rate',
+                          value: totalFee > 0
+                              ? '${((paidFee / totalFee) * 100).toStringAsFixed(1)}%'
+                              : '0%',
+                          icon: Icons.trending_up_rounded,
+                          color: AppColors.info,
                           textColor: Colors.white,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
-                      child: GestureDetector(
+                      child: _TappableCard(
+                        isActive: _paymentFilter == 'Unpaid',
                         onTap: () => _onSummaryCardTapped('Unpaid', 'All'),
                         child: SummaryCard(
                           label: 'Pending Clients',
                           value: '$unpaidCount',
-                          icon: Icons.pending_actions_rounded,
+                          icon: Icons.people_outline_rounded,
                           color: AppColors.warningBg,
                           textColor: AppColors.warning,
                           borderColor: AppColors.warning.withOpacity(0.3),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: GestureDetector(
+                      child: _TappableCard(
+                        isActive: _paymentFilter == 'Paid',
                         onTap: () => _onSummaryCardTapped('Paid', 'All'),
                         child: SummaryCard(
-                          label: 'Paid Clients',
+                          label: 'Completed Clients',
                           value: '$paidCount',
                           icon: Icons.verified_rounded,
-                          color: AppColors.infoBg,
-                          textColor: AppColors.info,
-                          borderColor: AppColors.info.withOpacity(0.3),
+                          color: AppColors.successBg,
+                          textColor: AppColors.success,
+                          borderColor: AppColors.success.withOpacity(0.3),
                         ),
                       ),
                     ),
@@ -343,46 +400,91 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
 
-        // ── Search + Filters ─────────────────────────────────────────
+        // Search & Filters
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('All Projects', style: AppTextStyles.titleLarge),
-                const SizedBox(height: 12),
+                if (_paymentFilter != 'All' || _statusFilter != 'All')
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.navy.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.navy.withOpacity(0.1)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.filter_alt_rounded, size: 18, color: AppColors.navy),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Active Filter: ${_paymentFilter != 'All' ? _paymentFilter : ''}'
+                            '${_statusFilter != 'All' ? ' · $_statusFilter' : ''}'
+                            '  (${filtered.length} results)',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.navy,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _paymentFilter = 'All';
+                              _statusFilter = 'All';
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: AppColors.navy.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close_rounded, size: 14, color: AppColors.navy),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
-                // Search bar
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('All Projects', style: AppTextStyles.titleLarge.copyWith(fontWeight: FontWeight.w800)),
+                    Text(
+                      '${filtered.length} items',
+                      style: AppTextStyles.labelLarge,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Premium Search Bar
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: AppShadows.soft,
                   ),
                   child: TextField(
                     controller: _searchCtrl,
                     onChanged: (v) => setState(() => _searchQuery = v),
                     decoration: InputDecoration(
-                      hintText: 'Search by name, ID, invoice…',
-                      hintStyle: const TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 14,
-                      ),
+                      hintText: 'Search by name, ID, or invoice...',
+                      hintStyle: AppTextStyles.bodyMedium,
                       prefixIcon: const Icon(
                         Icons.search_rounded,
                         color: AppColors.textMuted,
+                        size: 20,
                       ),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.close_rounded,
-                                  color: AppColors.textMuted),
+                              icon: const Icon(Icons.close_rounded, color: AppColors.textMuted, size: 18),
                               onPressed: () {
                                 _searchCtrl.clear();
                                 setState(() => _searchQuery = '');
@@ -390,14 +492,14 @@ class _HomeScreenState extends State<HomeScreen>
                             )
                           : null,
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
-                // Filter chips row
+                // Filter Chips
+                // Status filter row
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -405,16 +507,20 @@ class _HomeScreenState extends State<HomeScreen>
                       _buildFilterLabel('Status:'),
                       _buildChip('All', _statusFilter == 'All',
                           () => setState(() => _statusFilter = 'All')),
-                      _buildChip(
-                          'On Going',
-                          _statusFilter == 'On Going',
+                      _buildChip('On Going', _statusFilter == 'On Going',
                           () => setState(() => _statusFilter = 'On Going')),
-                      _buildChip(
-                          'Completed',
-                          _statusFilter == 'Completed',
+                      _buildChip('Completed', _statusFilter == 'Completed',
                           () => setState(() => _statusFilter = 'Completed')),
-                      const SizedBox(width: 8),
-                      _buildFilterLabel('Pay:'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Payment filter row
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildFilterLabel('Payment:'),
                       _buildChip('All', _paymentFilter == 'All',
                           () => setState(() => _paymentFilter = 'All')),
                       _buildChip('Paid', _paymentFilter == 'Paid',
@@ -424,75 +530,83 @@ class _HomeScreenState extends State<HomeScreen>
                     ],
                   ),
                 ),
-                const SizedBox(height: 10),
-
-                Text(
-                  '${filtered.length} of ${all.length} records',
-                  style: AppTextStyles.labelSmall,
-                ),
+                const SizedBox(height: 12),
+                const Divider(color: AppColors.divider),
                 const SizedBox(height: 8),
               ],
             ),
           ),
         ),
 
-        // ── Project List ─────────────────────────────────────────────
+        // Animated Project List
         filtered.isEmpty
             ? SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(40),
+                  padding: const EdgeInsets.all(60),
                   child: Column(
                     children: [
-                      Icon(Icons.search_off_rounded,
-                          size: 56, color: AppColors.textMuted),
-                      const SizedBox(height: 12),
-                      Text('No projects found',
-                          style: AppTextStyles.bodyMedium),
+                      Icon(Icons.search_off_rounded, size: 64, color: AppColors.textMuted),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No projects found',
+                        style: AppTextStyles.titleMedium.copyWith(color: AppColors.textMuted),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Try adjusting your search or filters',
+                        style: AppTextStyles.bodyMedium,
+                      ),
                     ],
                   ),
                 ),
               )
-            : SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (ctx, i) {
-                    final p = filtered[i];
-                    return ProjectListItem(
-                      project: p,
-                      index: i,
-                      onTap: () => Navigator.push(
-                        ctx,
-                        MaterialPageRoute(
-                          builder: (_) => ProjectDetailScreen(project: p),
-                        ),
-                      ),
-                    );
-                  },
-                  childCount: filtered.length,
+            : SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: AnimationLimiter(
+                  child: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (ctx, i) {
+                        final p = filtered[i];
+                        return AnimationConfiguration.staggeredList(
+                          position: i,
+                          duration: const Duration(milliseconds: 400),
+                          child: SlideAnimation(
+                            verticalOffset: 50,
+                            child: FadeInAnimation(
+                              child: ProjectListItem(
+                                project: p,
+                                index: i,
+                                onTap: () => Navigator.push(
+                                  ctx,
+                                  MaterialPageRoute(
+                                    builder: (_) => ProjectDetailScreen(project: p),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      childCount: filtered.length,
+                    ),
+                  ),
                 ),
               ),
-
         const SliverToBoxAdapter(child: SizedBox(height: 30)),
       ],
     );
   }
 
-  Widget _buildAppBarBg(List<Project> all) {
-    final totalFee = all.fold<double>(0, (s, p) => s + _parseAmount(p.feeAmount));
-    final paidFee =
-        all.where((p) => p.isPaid).fold<double>(0, (s, p) => s + _parseAmount(p.feeAmount));
-    final pct = totalFee > 0 ? (paidFee / totalFee).clamp(0, 1) : 0.0;
+  Widget _buildPremiumAppBar(List<Project> all, double totalFee, double paidFee) {
+    final pct = totalFee > 0 ? (paidFee / totalFee).clamp(0.0, 1.0) : 0.0;
 
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0A2540), Color(0xFF1A3A5C), Color(0xFF0D3060)],
-        ),
+        gradient: AppColors.primaryGradient,
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 56, 20, 16),
+          padding: const EdgeInsets.fromLTRB(20, 48, 20, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.end,
@@ -500,32 +614,32 @@ class _HomeScreenState extends State<HomeScreen>
               Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 52,
+                    height: 52,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.gold.withOpacity(0.2),
-                      border: Border.all(color: AppColors.gold, width: 1.5),
+                      gradient: AppColors.goldGradient,
+                      boxShadow: AppShadows.soft,
                     ),
-                    child: const Icon(Icons.person_rounded,
-                        color: AppColors.gold, size: 22),
+                    child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Welcome back,',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.6),
+                          color: Colors.white.withOpacity(0.7),
                           fontSize: 13,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       const Text(
-                        'Tarun',
+                        'Taruneshwar V',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -533,21 +647,18 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.2)),
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: Colors.white.withOpacity(0.2)),
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.shield_rounded,
-                            color: AppColors.gold, size: 14),
-                        SizedBox(width: 4),
+                        Icon(Icons.shield_rounded, color: AppColors.gold, size: 14),
+                        SizedBox(width: 6),
                         Text(
-                          'CFO',
+                            'Operation Head',
                           style: TextStyle(
                             color: AppColors.gold,
                             fontSize: 12,
@@ -559,9 +670,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-
-              // Collection progress
+              const SizedBox(height: 20),
               if (all.isNotEmpty) ...[
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -569,26 +678,28 @@ class _HomeScreenState extends State<HomeScreen>
                     Text(
                       'Collection Rate',
                       style: TextStyle(
-                          color: Colors.white.withOpacity(0.6), fontSize: 12),
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     Text(
                       '${(pct * 100).toStringAsFixed(1)}%',
                       style: const TextStyle(
                         color: AppColors.gold,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
-                    value: pct.toDouble(),
-                    backgroundColor: Colors.white.withOpacity(0.15),
-                    valueColor:
-                        const AlwaysStoppedAnimation<Color>(AppColors.gold),
+                    value: pct,
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
                     minHeight: 6,
                   ),
                 ),
@@ -602,8 +713,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildFilterLabel(String text) {
     return Padding(
-      padding: const EdgeInsets.only(right: 6, left: 2),
-      child: Text(text, style: AppTextStyles.labelSmall),
+      padding: const EdgeInsets.only(right: 8),
+      child: Text(text, style: AppTextStyles.labelLarge),
     );
   }
 
@@ -612,23 +723,16 @@ class _HomeScreenState extends State<HomeScreen>
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(right: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: selected ? AppColors.navy : Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: selected ? AppColors.navy : AppColors.divider,
+            color: selected ? AppColors.navy : AppColors.border,
+            width: 1,
           ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: AppColors.navy.withOpacity(0.2),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  )
-                ]
-              : [],
+          boxShadow: selected ? AppShadows.soft : null,
         ),
         child: Text(
           label,
@@ -641,20 +745,46 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
   }
+}
 
-  String _fmt(double v) {
-    return v.toStringAsFixed(0);
-  }
+class _TappableCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  final bool isActive;
 
-  double _parseAmount(String val) {
-    if (val.isEmpty) return 0.0;
-    val = val.replaceAll(',', ''); // Remove commas if any
-    final parts = val.split('+'); // Split math equations like "430 + 80"
-    double total = 0.0;
-    for (final p in parts) {
-      final cleaned = p.replaceAll(RegExp(r'[^0-9\.]'), ''); // Strip out any remaining text
-      total += double.tryParse(cleaned) ?? 0.0;
-    }
-    return total;
+  const _TappableCard({
+    required this.child,
+    required this.onTap,
+    required this.isActive,
+  });
+
+  @override
+  State<_TappableCard> createState() => _TappableCardState();
+}
+
+class _TappableCardState extends State<_TappableCard> {
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        transform: widget.isActive ? Matrix4.identity() : null,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: widget.isActive
+              ? [
+                  BoxShadow(
+                    color: AppColors.gold.withOpacity(0.4),
+                    blurRadius: 16,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : null,
+        ),
+        child: widget.child,
+      ),
+    );
   }
 }

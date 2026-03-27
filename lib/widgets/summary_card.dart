@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../utils/app_theme.dart';
 
-class SummaryCard extends StatelessWidget {
+class SummaryCard extends StatefulWidget {
   final String label;
   final String value;
   final IconData icon;
@@ -20,19 +20,31 @@ class SummaryCard extends StatelessWidget {
   });
 
   @override
+  State<SummaryCard> createState() => _SummaryCardState();
+}
+
+class _SummaryCardState extends State<SummaryCard> {
+  @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(16),
-        border: borderColor != null
-            ? Border.all(color: borderColor!, width: 1.5)
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            widget.color,
+            widget.color.withOpacity(0.85),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: widget.borderColor != null
+            ? Border.all(color: widget.borderColor!, width: 1.5)
             : null,
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.25),
-            blurRadius: 10,
+            color: widget.color.withOpacity(0.25),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -40,25 +52,34 @@ class SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: textColor, size: 20),
-          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(widget.icon, color: widget.textColor, size: 20),
+          ),
+          const SizedBox(height: 12),
           Text(
-            value,
+            widget.value,
             style: TextStyle(
-              color: textColor,
-              fontSize: 16,
+              color: widget.textColor,
+              fontSize: 20,
               fontWeight: FontWeight.w800,
+              height: 1.2,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Text(
-            label,
+            widget.label,
             style: TextStyle(
-              color: textColor.withOpacity(0.7),
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
+              color: widget.textColor.withOpacity(0.85),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
             ),
             maxLines: 1,
           ),

@@ -11,12 +11,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:stark_payments/main.dart';
 
 void main() {
-  testWidgets('CFO Tracker smoke test', (WidgetTester tester) async {
+  testWidgets('Operation Tracker smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const CFOTrackerApp());
 
-    // Verify that the App Bar title "CFO TRACKER" is present.
-    expect(find.text('CFO TRACKER'), findsOneWidget);
+    // Verify that the App Bar title "Operation TRACKER" is present.
+    expect(find.text('Operation TRACKER'), findsOneWidget);
     
     // Verify that the refresh button is present in the AppBar.
     expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);

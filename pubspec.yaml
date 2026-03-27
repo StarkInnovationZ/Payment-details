@@ -1,5 +1,5 @@
 name: cfo_tracker
-description: CFO Payment & Project Tracker for Tarun
+description: CFO Payment & Project Tracker for Taruneshwar V
 publish_to: 'none'
 version: 1.0.0+1 
 
@@ -10,13 +10,23 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.2.1
-  google_fonts: ^6.2.1
+  google_fonts: ^6.1.0
   intl: ^0.19.0
+  flutter_staggered_animations: ^1.1.1
+
 
 dev_dependencies:
-  flutter_test:
+  flutter_test: 
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/Logo.png
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/Logo.png"

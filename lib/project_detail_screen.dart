@@ -3,12 +3,17 @@ import 'package:flutter/services.dart';
 import '../models/project.dart';
 import '../utils/app_theme.dart';
 
-class ProjectDetailScreen extends StatelessWidget {
+class ProjectDetailScreen extends StatefulWidget {
   final Project project;
   const ProjectDetailScreen({super.key, required this.project});
 
+  @override
+  State<ProjectDetailScreen> createState() => _ProjectDetailScreenState();
+}
+
+class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   Color _statusColor() {
-    final s = project.status.toLowerCase();
+    final s = widget.project.status.toLowerCase();
     if (s.contains('complet') || s.contains('done')) return AppColors.success;
     if (s.contains('progress') || s.contains('active')) return AppColors.info;
     if (s.contains('pend') || s.contains('hold')) return AppColors.warning;
@@ -17,7 +22,7 @@ class ProjectDetailScreen extends StatelessWidget {
   }
 
   Color _payColor() {
-    return project.isPaid ? AppColors.success : AppColors.warning;
+    return widget.project.isPaid ? AppColors.success : AppColors.warning;
   }
 
   @override
@@ -29,9 +34,9 @@ class ProjectDetailScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          // ── Hero AppBar ──────────────────────────────────────────
+          // Hero AppBar
           SliverAppBar(
-            expandedHeight: 220,
+            expandedHeight: 280,
             pinned: true,
             backgroundColor: AppColors.navy,
             foregroundColor: Colors.white,
@@ -41,7 +46,7 @@ class ProjectDetailScreen extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [AppColors.navy, sc.withOpacity(0.8)],
+                    colors: [AppColors.navy, sc.withOpacity(0.7)],
                   ),
                 ),
                 child: SafeArea(
@@ -54,41 +59,51 @@ class ProjectDetailScreen extends StatelessWidget {
                         Row(
                           children: [
                             _StatusPill(
-                              label: project.status.isNotEmpty
-                                  ? project.status
+                              label: widget.project.status.isNotEmpty
+                                  ? widget.project.status
                                   : 'Unknown',
                               color: sc,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             _StatusPill(
-                              label: project.paymentStatus.isNotEmpty
-                                  ? project.paymentStatus
+                              label: widget.project.paymentStatus.isNotEmpty
+                                  ? widget.project.paymentStatus
                                   : 'N/A',
                               color: pc,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         Text(
-                          project.projectTitle.isNotEmpty
-                              ? project.projectTitle
+                          widget.project.projectTitle.isNotEmpty
+                              ? widget.project.projectTitle
                               : 'Untitled Project',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 22,
+                            fontSize: 26,
                             fontWeight: FontWeight.w800,
+                            height: 1.2,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Text(
-                          project.fullName.isNotEmpty
-                              ? project.fullName
+                          widget.project.fullName.isNotEmpty
+                              ? widget.project.fullName
                               : '—',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
-                            fontSize: 15,
+                            color: Colors.white.withOpacity(0.85),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Invoice: ${widget.project.invoiceNo}',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.6),
+                            fontSize: 13,
                           ),
                         ),
                       ],
@@ -97,69 +112,58 @@ class ProjectDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-            title: Text(
-              project.invoiceNo.isNotEmpty
-                  ? 'INV: ${project.invoiceNo}'
-                  : 'Project Detail',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            title: const Text(
+              'Project Details',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
           ),
 
-          // ── Body ────────────────────────────────────────────────
+          // Body
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  // ── Fee highlight ──────────────────────────────
-                  if (project.feeAmount.isNotEmpty)
+                  // Fee Highlight Card
+                  if (widget.project.feeAmount.isNotEmpty)
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
-                      margin: const EdgeInsets.only(bottom: 16),
+                      margin: const EdgeInsets.only(bottom: 20),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            project.isPaid
-                                ? AppColors.success
-                                : AppColors.warning,
-                            project.isPaid
-                                ? AppColors.success.withOpacity(0.7)
-                                : AppColors.warning.withOpacity(0.7),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
+                        gradient: widget.project.isPaid
+                            ? AppColors.successGradient
+                            : AppColors.warningGradient,
+                        borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: (project.isPaid
+                            color: (widget.project.isPaid
                                     ? AppColors.success
                                     : AppColors.warning)
                                 .withOpacity(0.3),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
                           ),
                         ],
                       ),
                       child: Row(
                         children: [
                           Container(
-                            width: 48,
-                            height: 48,
+                            width: 56,
+                            height: 56,
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              project.isPaid
+                              widget.project.isPaid
                                   ? Icons.check_circle_rounded
                                   : Icons.pending_rounded,
                               color: Colors.white,
-                              size: 26,
+                              size: 28,
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 18),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -167,14 +171,15 @@ class ProjectDetailScreen extends StatelessWidget {
                                 'Fee Amount',
                                 style: TextStyle(
                                   color: Colors.white70,
-                                  fontSize: 12,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                               Text(
-                                '₹ ${project.feeAmount}',
+                                '₹ ${widget.project.feeAmount}',
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 26,
+                                  fontSize: 32,
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
@@ -184,21 +189,34 @@ class ProjectDetailScreen extends StatelessWidget {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Text(
-                                project.isPaid ? '✓ PAID' : '⏳ PENDING',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1,
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  widget.project.isPaid ? 'PAID' : 'PENDING',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1,
+                                  ),
                                 ),
                               ),
-                              if (project.paymentMethod.isNotEmpty)
-                                Text(
-                                  project.paymentMethod,
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
+                              if (widget.project.paymentMethod.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  child: Text(
+                                    widget.project.paymentMethod,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ),
                             ],
@@ -207,44 +225,44 @@ class ProjectDetailScreen extends StatelessWidget {
                       ),
                     ),
 
-                  // ── Customer Info ──────────────────────────────
+                  // Customer Info
                   _InfoCard(
                     title: 'Customer Information',
                     icon: Icons.person_rounded,
                     rows: [
-                      _InfoRow('Full Name', project.fullName),
-                      _InfoRow('Customer ID', project.customerId),
-                      _InfoRow('Roll / Role', project.roll),
-                      _InfoRow('Email', project.email),
-                      _InfoRow('Phone', project.phone),
+                      _InfoRow('Full Name', widget.project.fullName),
+                      _InfoRow('Customer ID', widget.project.customerId),
+                      _InfoRow('Roll / Role', widget.project.roll),
+                      _InfoRow('Email', widget.project.email),
+                      _InfoRow('Phone', widget.project.phone),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
 
-                  // ── Project Info ───────────────────────────────
+                  // Project Info
                   _InfoCard(
                     title: 'Project Information',
                     icon: Icons.folder_rounded,
                     rows: [
-                      _InfoRow('Invoice No', project.invoiceNo),
-                      _InfoRow('Project Title', project.projectTitle),
-                      _InfoRow('Service', project.service),
-                      _InfoRow('Project Status', project.status),
+                      _InfoRow('Invoice No', widget.project.invoiceNo),
+                      _InfoRow('Project Title', widget.project.projectTitle),
+                      _InfoRow('Service', widget.project.service),
+                      _InfoRow('Project Status', widget.project.status),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
 
-                  // ── Payment Info ───────────────────────────────
+                  // Payment Info
                   _InfoCard(
                     title: 'Payment Information',
                     icon: Icons.payments_rounded,
                     rows: [
-                      _InfoRow('Fee Amount', project.feeAmount),
-                      _InfoRow('Payment Status', project.paymentStatus),
-                      _InfoRow('Payment Method', project.paymentMethod),
-                      _InfoRow('Transaction ID', project.transactionId,
+                      _InfoRow('Fee Amount', widget.project.feeAmount),
+                      _InfoRow('Payment Status', widget.project.paymentStatus),
+                      _InfoRow('Payment Method', widget.project.paymentMethod),
+                      _InfoRow('Transaction ID', widget.project.transactionId,
                           copyable: true),
-                      _InfoRow('Payment Date', project.paymentDate),
+                      _InfoRow('Payment Date', widget.project.paymentDate),
                     ],
                   ),
 
@@ -259,25 +277,30 @@ class ProjectDetailScreen extends StatelessWidget {
   }
 }
 
-class _StatusPill extends StatelessWidget {
+class _StatusPill extends StatefulWidget {
   final String label;
   final Color color;
   const _StatusPill({required this.label, required this.color});
 
   @override
+  State<_StatusPill> createState() => _StatusPillState();
+}
+
+class _StatusPillState extends State<_StatusPill> {
+  @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
+        color: widget.color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: widget.color.withOpacity(0.5)),
       ),
       child: Text(
-        label,
-        style: TextStyle(
+        widget.label,
+        style: const TextStyle(
           color: Colors.white,
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -285,7 +308,7 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-class _InfoCard extends StatelessWidget {
+class _InfoCard extends StatefulWidget {
   final String title;
   final IconData icon;
   final List<_InfoRow> rows;
@@ -297,43 +320,50 @@ class _InfoCard extends StatelessWidget {
   });
 
   @override
+  State<_InfoCard> createState() => _InfoCardState();
+}
+
+class _InfoCardState extends State<_InfoCard> {
+  @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppShadows.soft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(7),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.navy.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(8),
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.navy.withOpacity(0.1),
+                        AppColors.navy.withOpacity(0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: AppColors.navy, size: 16),
+                  child: Icon(widget.icon, color: AppColors.navy, size: 18),
                 ),
-                const SizedBox(width: 10),
-                Text(title,
-                    style: AppTextStyles.titleMedium
-                        .copyWith(color: AppColors.navy)),
+                const SizedBox(width: 12),
+                Text(
+                  widget.title,
+                  style: AppTextStyles.titleMedium.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ],
             ),
           ),
-          Divider(height: 1, color: AppColors.divider),
-          ...rows.map((r) => r.build(context)).toList(),
+          const Divider(height: 1, color: AppColors.divider),
+          ...widget.rows.map((r) => r.build(context)).toList(),
         ],
       ),
     );
@@ -349,7 +379,7 @@ class _InfoRow {
 
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -357,13 +387,15 @@ class _InfoRow {
             width: 130,
             child: Text(
               label,
-              style: AppTextStyles.bodyMedium,
+              style: AppTextStyles.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               value.isNotEmpty ? value : '—',
-              style: AppTextStyles.titleMedium,
+              style: AppTextStyles.bodyLarge,
             ),
           ),
           if (copyable && value.isNotEmpty)
@@ -377,13 +409,20 @@ class _InfoRow {
                     backgroundColor: AppColors.navy,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 );
               },
-              child: const Icon(Icons.copy_rounded,
-                  size: 16, color: AppColors.textMuted),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.backgroundAlt,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.copy_rounded,
+                    size: 16, color: AppColors.textMuted),
+              ),
             ),
         ],
       ),
