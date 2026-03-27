@@ -5,6 +5,7 @@ import '../utils/app_theme.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/project_list_item.dart';
 import 'project_detail_screen.dart';
+import 'screens/report_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -50,7 +51,9 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _refresh() {
-    setState(() => _future = ApiService.fetchProjects());
+    setState(() {
+      _future = ApiService.fetchProjects();
+    });
   }
 
   List<Project> _filter(List<Project> all) {
@@ -217,6 +220,13 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.table_chart_rounded, color: Colors.white),
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => ReportScreen(projects: all)));
+              },
+              tooltip: 'View Full Sheet',
+            ),
             IconButton(
               icon: const Icon(Icons.refresh_rounded, color: Colors.white),
               onPressed: _refresh,

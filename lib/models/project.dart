@@ -1,4 +1,5 @@
 class Project {
+  final String sNo;
   final String invoiceNo;
   final String status;
   final String customerId;
@@ -13,8 +14,12 @@ class Project {
   final String paymentMethod;
   final String transactionId;
   final String paymentDate;
+  final String billCopy;
+  final String proof;
+  final int? rowIndex; // Added to handle editing
 
   Project({
+    required this.sNo,
     required this.invoiceNo,
     required this.status,
     required this.customerId,
@@ -29,11 +34,16 @@ class Project {
     required this.paymentMethod,
     required this.transactionId,
     required this.paymentDate,
+    required this.billCopy,
+    required this.proof,
+    this.rowIndex,
   });
 
   factory Project.fromJson(Map<String, dynamic> json) {
     return Project(
-      invoiceNo: (json['Invoice No'] ?? json['invoiceNo'] ?? '').toString(),
+      sNo: (json['S.No'] ?? json['sNo'] ?? '').toString(),
+      rowIndex: json['rowIndex'] != null ? int.tryParse(json['rowIndex'].toString()) : null,
+      invoiceNo: (json['Invoice No'] ?? json['invoice_no'] ?? json['invoiceNo'] ?? '').toString(),
       status: (json['Status'] ?? json['status'] ?? '').toString(),
       customerId: (json['Customer ID'] ?? json['customerId'] ?? '').toString(),
       fullName: (json['Full Name'] ?? json['fullName'] ?? '').toString(),
@@ -47,6 +57,8 @@ class Project {
       paymentMethod: (json['Payment Method'] ?? json['paymentMethod'] ?? '').toString(),
       transactionId: (json['Transcation ID'] ?? json['transactionId'] ?? '').toString(),
       paymentDate: (json['Payment Date'] ?? json['paymentDate'] ?? '').toString(),
+      billCopy: (json['Bill copy'] ?? '').toString(),
+      proof: (json['Proof'] ?? '').toString(),
     );
   }
 
